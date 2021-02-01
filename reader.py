@@ -1,28 +1,26 @@
-import csv
-import os
-import re
+import glob
 import pandas as pd
 
 article_csv_directory = 'KP_HISTORY/dataset'
 
-structure = {'keyword': [], 'year': []}
-df = pd.DataFrame(structure)
+
+def process_csv_file(file_path: str, csv_column: str) -> pd.DataFrame:
+    df = pd.read_csv(file_path, sep='\t',  index_col=False, usecols=[csv_column, 'PY']).dropna()
+    df[csv_column] = df[csv_column].str.lower()
+    df['PY'] = df['PY'].astype(int)
+    return df
 
 
-def proces_csv_file(file_path, csv_column):
-    with open(file_path) as csv_file:
-        reader = csv.DictReader(csv_file, delimiter="\t")
-        for row in reader:
-            if csv_column in row:
-                keywords = re.sub(r'[^a-zA-Z0-9 ]', '', row[csv_column])
-                year = row['PY']
-                df.append({'keyword': keywords, 'year': year}, ignore_index=True)
+def read_csv_files(csv_column: str) -> pd.DataFrame:
+    return pd.concat([
+                process_csv_file(article_csv, csv_column) for article_csv in glob.glob(article_csv_directory + "/*.csv")
+                ], ignore_index=True)
 
 
-articles_list = os.listdir(article_csv_directory)
-for article_csv in articles_list:
-    print('Current article: ' + article_csv)
-    proces_csv_file(article_csv_directory + '/' + article_csv, 'DE')
+df_ak = read_csv_files('DE')
+df_ak.to_csv('data/ak.csv')
+del df_ak
 
-df.to_pickle('author_keywords')
-print(df)
+df_kp = read_csv_files('ID')
+df_kp.to_csv('data/kp.csv')
+del df_kp
