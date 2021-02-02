@@ -213,7 +213,7 @@ for key, value in keywords_dictionary.items():
 
         df = pd.DataFrame(data=dictionary)
         df.to_pickle("./output/"+key+".pkl")
-        df.to_csv("./output/"+key+".pkl")
+        df.to_csv("./output/"+key+".csv")
 
 
 
