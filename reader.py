@@ -20,6 +20,7 @@ def process_csv_file(file_path: str, csv_column: str) -> pd.DataFrame:
     df = pd.read_csv(file_path, sep='\t',  index_col=False, usecols=[csv_column, 'PY']).dropna()
     df[csv_column] = df[csv_column].str.lower()
     df['PY'] = df['PY'].astype(int)
+    df = df.rename(columns={"PY": "YEAR", csv_column: "KEYWORDS"})
     return df
 
 
