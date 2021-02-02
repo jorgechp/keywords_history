@@ -1,5 +1,6 @@
 import itertools
 import re
+from statistics import mean, stdev
 
 import nltk
 import networkx as nx
@@ -71,23 +72,27 @@ def pre_process_raw_keywords(raw_keywords: str) -> []:
     return pre_processed_keywords
 
 
-def parse_keywords_relations(keyword_network: nx.DiGraph, pre_processed_keywords: []) -> None:
+def parse_keywords_relations(keyword_network: nx.Graph, pre_processed_keywords: []) -> None:
     """
     Define new relations between keywords, or increase the weight.
 
-    :param keyword_network: The DiGraph with the network to be modified.
+    :param keyword_network: The Graph with the network to be modified.
     :param pre_processed_keywords: List of keywords to be parsed.
     """
-    combinations = itertools.combinations(pre_processed_keywords, 2)
 
-    for combination in combinations:
-        keyword_a = combination[0]
-        keyword_b = combination[1]
+    if len(pre_processed_keywords) > 1:
+        combinations = itertools.combinations(pre_processed_keywords, 2)
 
-        if not keyword_network.has_edge(keyword_a, keyword_b):
-            keyword_network.add_edge(keyword_a, keyword_b, weight = 1)
-        else:
-            keyword_network[keyword_a][keyword_b]['weight'] += 1
+        for combination in combinations:
+            keyword_a = combination[0]
+            keyword_b = combination[1]
+
+            if not keyword_network.has_edge(keyword_a, keyword_b):
+                keyword_network.add_edge(keyword_a, keyword_b, weight = 1)
+            else:
+                keyword_network[keyword_a][keyword_b]['weight'] += 1
+    else:
+        keyword_network.add_node(pre_processed_keywords[0])
 
 
 def process_keywords(dataframe: pd.DataFrame) -> set:
@@ -100,19 +105,20 @@ def process_keywords(dataframe: pd.DataFrame) -> set:
     keywords_set = set()
     for i, row in dataframe.iterrows():
         raw_keywords = row['KEYWORDS']
-        keywords_set.update(pre_process_raw_keywords(raw_keywords))
+        pre_processed_keywords = pre_process_raw_keywords(raw_keywords)
+        keywords_set.update(pre_processed_keywords)
     return keywords_set
 
 
-def process_networkx(dataframe: pd.DataFrame) -> nx.DiGraph:
+def process_networkx(dataframe: pd.DataFrame) -> nx.Graph:
     """
     Process the keywords in the network.
 
     :param dataframe: The dataframe which contains the keywords.
-    :return: A digraph.
+    :return: A Graph.
     """
 
-    keyword_network = nx.DiGraph()
+    keyword_network = nx.Graph()
     for i, row in dataframe.iterrows():
         raw_keywords = row['KEYWORDS']
         pre_processed_keywords = pre_process_raw_keywords(raw_keywords)
@@ -121,11 +127,45 @@ def process_networkx(dataframe: pd.DataFrame) -> nx.DiGraph:
 
 
 
-year_range = range(2000,2020, 1)
+
+
+
+def compute_keywords_parameter(keyword: str, keyword_serie: KeywordSerie, network: nx.Graph) -> None:
+    """
+    Computes parameters of a keyword.
+
+    :param keyword: The string that represnets the keyword
+    :param keyword_serie: A instance of keyword_serie
+    :param network: The Graph
+    :return:
+    """
+
+    keyword_degree_centrality = degree_centrality[keyword]
+    keyword_serie.centrality.append(keyword_degree_centrality)
+    edge_list = network.edges(keyword, data=True)
+    edge_neigbours_centrality = []
+    for edge in edge_list:
+        edge_neigbours_centrality.append(degree_centrality[edge[1]])
+    edge_mean = mean(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
+    edge_desvt = stdev(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
+    number_of_edges = sum([edge[2]['weight'] for edge in edge_list])
+    keyword_serie.neighbour_centrality.append(edge_mean)
+    keyword_serie.neighbour_centrality_stdev.append(edge_desvt)
+    keyword_serie.number_of_edges.append(number_of_edges)
+
+
+def compute_removal(keyword_serie: KeywordSerie) -> None:
+    keyword_serie.centrality.append(0)
+    keyword_serie.number_of_edges.append(0)
+    keyword_serie.neighbour_centrality.append(0)
+    keyword_serie.neighbour_centrality_stdev.append(0)
+
+START_YEAR = 2000
+END_YEAR = 2020
+year_range = range(START_YEAR, END_YEAR + 1, 1)
 keywords_dictionary = dict()
 keywords_set = set()
 
-last_year = None
 for year in year_range:
     df_filtered = filtered_per_year(df, exact_year=year)
     keywords_year_set = process_keywords(df_filtered)
@@ -133,37 +173,46 @@ for year in year_range:
     network = process_networkx(df_filtered)
     degree_centrality = nx.degree_centrality(network)
 
-    #Intersections (Keywords which are in previous years)
-
-    keywords_intersetcion = keywords_set.intersection(keywords_year_set)
+    keywords_intersection = keywords_set.intersection(keywords_year_set)
     keywords_addition = keywords_year_set.difference(keywords_set)
+    keywords_removal = keywords_set.difference(keywords_year_set)
     keywords_set.update(keywords_year_set)
     del keywords_year_set
 
-    for keyword in keywords_intersetcion:
-        keyword_serie = keywords_dictionary[keyword]
-        keyword_degree_centrality = 0
-        if keyword in degree_centrality:
-            keyword_degree_centrality = degree_centrality[keyword]
-        keyword_serie.centrality.append(keyword_degree_centrality)
+    # Intersections (Keywords which are in previous years)
+    [compute_keywords_parameter(keyword, keywords_dictionary[keyword], network) for keyword in keywords_intersection]
+    del keywords_intersection
 
 
-
-    del keywords_intersetcion
     #Additions (New keywords)
 
     for keyword in keywords_addition:
-        keywords_dictionary[keyword] = KeywordSerie(keyword, year)
-        keyword_degree_centrality = 0
-
-        if keyword in degree_centrality:
-            keyword_degree_centrality = degree_centrality[keyword]
-        keyword_serie.centrality.append(keyword_degree_centrality)
+        keyword_serie = KeywordSerie(keyword, year)
+        keywords_dictionary[keyword] = keyword_serie
+        compute_keywords_parameter(keyword, keyword_serie, network)
 
     del keywords_addition
     #Removals (Old keywords)
+    [compute_removal(keywords_dictionary[keyword]) for keyword in keywords_removal]
+    del keywords_removal
 
-    last_year = keywords_set
+del keywords_set
+for key, value in keywords_dictionary.items():
+        total_years = list(range(1, END_YEAR - value.starting_year + 1, 1))
+        centrality = value.centrality
+        number_of_edges = value.number_of_edges
+        neighbour_centrality = value.neighbour_centrality
+        neighbour_centrality_stdev = value.neighbour_centrality_stdev
 
-nx.write_pajek(network, "data/ak_pajek.net")
+        dictionary = {'total_years': total_years,
+             'centrality': centrality,
+             'number_of_edges': number_of_edges,
+             'neighbour_centrality': neighbour_centrality,
+             'neighbour_centrality_stdev': neighbour_centrality_stdev
+             }
+
+        df = pd.DataFrame(data=dictionary)
+        df.to_pickle("./output/"+key+".pkl")
+
+
 

@@ -9,13 +9,10 @@ class KeywordSerie(object):
     def __init__(self, keyword: str, starting_year: int):
         self._keyword = keyword
         self._starting_year = starting_year
-        self._presence = []
         self._centrality = []
         self._number_of_edges = []
-
-    @property
-    def presence(self):
-        return self._presence
+        self._neighbour_centrality = []
+        self._neighbour_centrality_stdev = []
 
     @property
     def centrality(self):
@@ -24,6 +21,14 @@ class KeywordSerie(object):
     @property
     def number_of_edges(self):
         return self._number_of_edges
+
+    @property
+    def neighbour_centrality (self):
+        return self._neighbour_centrality
+
+    @property
+    def neighbour_centrality_stdev(self):
+        return self._neighbour_centrality_stdev
 
     @property
     def keyword(self):
