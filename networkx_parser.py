@@ -46,11 +46,14 @@ def pre_process_raw_keyword(raw_keyword: str) -> str:
     :param raw_keyword: The unproceessed string
     :return: A cleaned string
     """
+
+
     pre_processed_keyword = raw_keyword.rstrip()
     keywords = pre_processed_keyword.split()
     keywords_list = []
     for keyword in keywords:
         keyword = keyword.lower()
+        keyword= re.sub(r'\W+', '', keyword)
         keyword = lemmatizer_caller(keyword)
         keywords_list.append(keyword)
     return ''.join(keywords_list)
@@ -161,7 +164,7 @@ def compute_removal(keyword_serie: KeywordSerie) -> None:
     keyword_serie.neighbour_centrality_stdev.append(0)
 
 START_YEAR = 2000
-END_YEAR = 2020
+END_YEAR = 2000
 year_range = range(START_YEAR, END_YEAR + 1, 1)
 keywords_dictionary = dict()
 keywords_set = set()
@@ -198,13 +201,15 @@ for year in year_range:
 
 del keywords_set
 for key, value in keywords_dictionary.items():
-        total_years = list(range(1, END_YEAR - value.starting_year + 1, 1))
+        total_years = list(range(1, END_YEAR - value.starting_year + 2, 1))
         centrality = value.centrality
         number_of_edges = value.number_of_edges
         neighbour_centrality = value.neighbour_centrality
         neighbour_centrality_stdev = value.neighbour_centrality_stdev
 
-        dictionary = {'total_years': total_years,
+        dictionary = {
+             'years': list(year_range),
+             'total_years': total_years,
              'centrality': centrality,
              'number_of_edges': number_of_edges,
              'neighbour_centrality': neighbour_centrality,
