@@ -161,6 +161,7 @@ START_YEAR = 2000
 END_YEAR = 2020
 year_range = range(START_YEAR, END_YEAR + 1, 1)
 keywords_persistence = DataPersistence('output/keywords.db')
+keywords_persistence.create_schema()
 keywords_set = set()
 
 for year in year_range:
