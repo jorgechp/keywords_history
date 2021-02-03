@@ -150,8 +150,11 @@ def compute_keywords_parameter(keyword: str,
         edge_neigbours_centrality.append(degree_centrality[edge[1]])
     edge_mean = mean(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
     edge_desvt = stdev(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
-    number_of_edges = sum([edge[2]['weight'] for edge in edge_list])
-    persistence.insert_data_point(keyword, year, keyword_degree_centrality, number_of_edges, edge_mean, edge_desvt)
+    edge_weights = [edge[2]['weight'] for edge in edge_list]
+    edge_strength = sum(edge_weights)
+    density = mean(edge_weights) if len(edge_weights) > 0 else 0
+
+    persistence.insert_data_point(keyword, year, keyword_degree_centrality, edge_strength, edge_mean, edge_desvt, density)
 
 
 START_YEAR = 2000

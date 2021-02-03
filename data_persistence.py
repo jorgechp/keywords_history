@@ -15,7 +15,8 @@ class DataPersistence(object):
                     "centrality REAL NOT NULL,"
                     "number_of_edges INTEGER NOT NULL,"
                     "neighbour_centrality REAL NOT NULL,"
-                    "neighbour_centrality_stdev REAL NOT NULL"
+                    "neighbour_centrality_stdev REAL NOT NULL,"
+                    "density REAL NOT NULL"
             ")"
         )
         self._con.commit()
@@ -28,7 +29,8 @@ class DataPersistence(object):
                           centrality: float,
                           number_of_edges: int,
                           neighbour_centrality: float,
-                          neighbour_centrality_stdev: float) -> None:
+                          neighbour_centrality_stdev: float,
+                          density: float) -> None:
         """
         Inserts a new temporal data point.
 
@@ -38,6 +40,7 @@ class DataPersistence(object):
         :param number_of_edges:
         :param neighbour_centrality:
         :param neighbour_centrality_stdev:
+        :param density:
         """
 
         cursorObj = self._con.cursor()
@@ -47,13 +50,15 @@ class DataPersistence(object):
                                             "centrality,"
                                             "number_of_edges,"
                                             "neighbour_centrality,"
-                                            "neighbour_centrality_stdev) VALUES('{}',{} , {}, {}, {}, {})".format(
+                                            "neighbour_centrality_stdev,"
+                                            "density) VALUES('{}',{} , {}, {}, {}, {}, {})".format(
                                 keyword,
                                 year,
                                 centrality,
                                 number_of_edges,
                                 neighbour_centrality,
-                                neighbour_centrality_stdev)
+                                neighbour_centrality_stdev,
+                                density)
                         )
         self._con.commit()
         cursorObj.close()
@@ -71,16 +76,19 @@ class DataPersistence(object):
             number_of_edges = []
             neighbour_centrality = []
             neighbour_centrality_stdev = []
+            density = []
 
             for data_year in rows_per_year:
                 centrality_serie.append(data_year[3])
                 number_of_edges.append(data_year[4])
                 neighbour_centrality.append(data_year[5])
                 neighbour_centrality_stdev.append(data_year[6])
+                density.append(data_year[7])
 
             retrieved_serie.centrality.append(centrality_serie)
             retrieved_serie.number_of_edges.append(number_of_edges)
             retrieved_serie.neighbour_centrality.append(neighbour_centrality)
             retrieved_serie.neighbour_centrality_stdev.append(neighbour_centrality_stdev)
+            retrieved_serie.density.append(density)
         cursorObj.close()
         return retrieved_serie

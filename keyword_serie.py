@@ -13,6 +13,7 @@ class KeywordSerie(object):
         self._number_of_edges = []
         self._neighbour_centrality = []
         self._neighbour_centrality_stdev = []
+        self._density = []
 
     @property
     def centrality(self):
@@ -29,6 +30,10 @@ class KeywordSerie(object):
     @property
     def neighbour_centrality_stdev(self):
         return self._neighbour_centrality_stdev
+
+    @property
+    def density(self):
+        return self._density
 
     @property
     def keyword(self):
