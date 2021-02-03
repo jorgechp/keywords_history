@@ -21,7 +21,41 @@ class DataPersistence(object):
         )
         self._con.commit()
         cursorObj.close()
+        self._persistence_list = None
 
+    def start_year(self):
+        self._persistence_list = []
+
+    def end_year(self):
+        cursorObj = self._con.cursor()
+        for entry in self._persistence_list:
+            keyword = entry[0]
+            year = entry[1]
+            centrality = entry[2]
+            number_of_edges = entry[3]
+            neighbour_centrality = entry[4]
+            neighbour_centrality_stdev = entry[5]
+            density = entry[6]
+
+            cursorObj.execute("INSERT INTO SERIE("
+                                                "keyword,"
+                                                "year,"
+                                                "centrality,"
+                                                "number_of_edges,"
+                                                "neighbour_centrality,"
+                                                "neighbour_centrality_stdev,"
+                                                "density) VALUES('{}',{} , {}, {}, {}, {}, {})".format(
+                                    keyword,
+                                    year,
+                                    centrality,
+                                    number_of_edges,
+                                    neighbour_centrality,
+                                    neighbour_centrality_stdev,
+                                    density)
+                            )
+        self._con.commit()
+        cursorObj.close()
+        del self._persistence_list
 
     def insert_data_point(self,
                           keyword: str,
@@ -43,25 +77,13 @@ class DataPersistence(object):
         :param density:
         """
 
-        cursorObj = self._con.cursor()
-        cursorObj.execute("INSERT INTO SERIE("
-                                            "keyword,"
-                                            "year,"
-                                            "centrality,"
-                                            "number_of_edges,"
-                                            "neighbour_centrality,"
-                                            "neighbour_centrality_stdev,"
-                                            "density) VALUES('{}',{} , {}, {}, {}, {}, {})".format(
-                                keyword,
-                                year,
-                                centrality,
-                                number_of_edges,
-                                neighbour_centrality,
-                                neighbour_centrality_stdev,
-                                density)
-                        )
-        self._con.commit()
-        cursorObj.close()
+        self._persistence_list.append((keyword,
+                                       year,
+                                       centrality,
+                                       number_of_edges,
+                                       neighbour_centrality,
+                                       neighbour_centrality_stdev,
+                                       density))
 
     def get_serie_by_keyword(self, keyword: str) -> KeywordSerie:
         cursorObj = self._con.cursor()

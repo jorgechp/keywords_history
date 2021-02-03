@@ -164,6 +164,8 @@ keywords_persistence = DataPersistence('output/keywords.db')
 keywords_set = set()
 
 for year in year_range:
+    print("Starting year " + str(year))
+    keywords_persistence.start_year()
     df_filtered = filtered_per_year(df, exact_year=year)
     keywords_year_set = process_keywords(df_filtered)
 
@@ -185,7 +187,8 @@ for year in year_range:
     del keywords_addition
 
     #Removals (Old keywords)
-    [keywords_persistence.insert_data_point(keyword, year, 0, 0, 0, 0) for keyword in keywords_removal]
+    [keywords_persistence.insert_data_point(keyword, year, 0, 0, 0, 0, 0) for keyword in keywords_removal]
     del keywords_removal
+    keywords_persistence.end_year()
 
 del keywords_set
