@@ -1,11 +1,11 @@
 import itertools
 import re
-from statistics import mean, stdev
-
 import nltk
 import networkx as nx
 import pandas as pd
+from statistics import mean, stdev
 
+from data_persistence import DataPersistence
 from keyword_serie import KeywordSerie
 
 nltk.download('wordnet')
@@ -129,22 +129,21 @@ def process_networkx(dataframe: pd.DataFrame) -> nx.Graph:
     return keyword_network
 
 
-
-
-
-
-def compute_keywords_parameter(keyword: str, keyword_serie: KeywordSerie, network: nx.Graph) -> None:
+def compute_keywords_parameter(keyword: str,
+                               year: int,
+                               network: nx.Graph,
+                               persistence: DataPersistence) -> None:
     """
     Computes parameters of a keyword.
 
     :param keyword: The string that represnets the keyword
-    :param keyword_serie: A instance of keyword_serie
+    :param year: The current year
     :param network: The Graph
+    :param persistence: A DataPersistence instance
     :return:
     """
 
     keyword_degree_centrality = degree_centrality[keyword]
-    keyword_serie.centrality.append(keyword_degree_centrality)
     edge_list = network.edges(keyword, data=True)
     edge_neigbours_centrality = []
     for edge in edge_list:
@@ -152,21 +151,13 @@ def compute_keywords_parameter(keyword: str, keyword_serie: KeywordSerie, networ
     edge_mean = mean(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
     edge_desvt = stdev(edge_neigbours_centrality) if len(edge_neigbours_centrality) > 1 else 0
     number_of_edges = sum([edge[2]['weight'] for edge in edge_list])
-    keyword_serie.neighbour_centrality.append(edge_mean)
-    keyword_serie.neighbour_centrality_stdev.append(edge_desvt)
-    keyword_serie.number_of_edges.append(number_of_edges)
+    persistence.insert_data_point(keyword, year, keyword_degree_centrality, number_of_edges, edge_mean, edge_desvt)
 
-
-def compute_removal(keyword_serie: KeywordSerie) -> None:
-    keyword_serie.centrality.append(0)
-    keyword_serie.number_of_edges.append(0)
-    keyword_serie.neighbour_centrality.append(0)
-    keyword_serie.neighbour_centrality_stdev.append(0)
 
 START_YEAR = 2000
-END_YEAR = 2000
+END_YEAR = 2020
 year_range = range(START_YEAR, END_YEAR + 1, 1)
-keywords_dictionary = dict()
+keywords_persistence = DataPersistence('output/keywords.db')
 keywords_set = set()
 
 for year in year_range:
@@ -183,42 +174,15 @@ for year in year_range:
     del keywords_year_set
 
     # Intersections (Keywords which are in previous years)
-    [compute_keywords_parameter(keyword, keywords_dictionary[keyword], network) for keyword in keywords_intersection]
+    [compute_keywords_parameter(keyword, year, network, keywords_persistence) for keyword in keywords_intersection]
     del keywords_intersection
 
-
     #Additions (New keywords)
-
-    for keyword in keywords_addition:
-        keyword_serie = KeywordSerie(keyword, year)
-        keywords_dictionary[keyword] = keyword_serie
-        compute_keywords_parameter(keyword, keyword_serie, network)
-
+    [compute_keywords_parameter(keyword, year, network, keywords_persistence) for keyword in keywords_addition]
     del keywords_addition
+
     #Removals (Old keywords)
-    [compute_removal(keywords_dictionary[keyword]) for keyword in keywords_removal]
+    [keywords_persistence.insert_data_point(keyword, year, 0, 0, 0, 0) for keyword in keywords_removal]
     del keywords_removal
 
 del keywords_set
-for key, value in keywords_dictionary.items():
-        total_years = list(range(1, END_YEAR - value.starting_year + 2, 1))
-        centrality = value.centrality
-        number_of_edges = value.number_of_edges
-        neighbour_centrality = value.neighbour_centrality
-        neighbour_centrality_stdev = value.neighbour_centrality_stdev
-
-        dictionary = {
-             'years': list(year_range),
-             'total_years': total_years,
-             'centrality': centrality,
-             'number_of_edges': number_of_edges,
-             'neighbour_centrality': neighbour_centrality,
-             'neighbour_centrality_stdev': neighbour_centrality_stdev
-             }
-
-        df = pd.DataFrame(data=dictionary)
-        df.to_pickle("./output/"+key+".pkl")
-        df.to_csv("./output/"+key+".csv")
-
-
-
