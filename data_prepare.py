@@ -6,7 +6,7 @@ from random import sample
 from sklearn import preprocessing
 from data_persistence import DataPersistence
 
-RATE_OF_TRAINING_KEYWORDS = 0.67
+RATE_OF_TRAINING_KEYWORDS = 0.1
 TRAIN_START_YEAR = 2000
 TRAIN_END_YEAR = 2015
 
